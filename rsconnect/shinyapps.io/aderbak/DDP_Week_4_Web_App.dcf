@@ -1,0 +1,13 @@
+name: DDP_Week_4_Web_App
+title: DDP_Week_4_Web_App
+username:
+account: aderbak
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 258775
+bundleId: 1184712
+url: https://aderbak.shinyapps.io/DDP_Week_4_Web_App/
+when: 1516478390.25006
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: testing file.R

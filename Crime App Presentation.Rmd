@@ -1,0 +1,139 @@
+---
+title: "Crime Analysis & Prediction Shiny App"
+author: "Andrew Derbak"
+date: "January 20, 2018"
+output: 
+  ioslides_presentation: 
+    fig_height: 8
+    keep_md: yes
+    widescreen: yes
+  slidy_presentation:
+    css: temp.css
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Executive Summary
+
+Using data from the `USArrests` dataset, we can see which states had the highest arrest rates for either `Assault`,`Rape`, and even `Murder`. Though this data is from 1973, it can still give us high-level view as to how each of these arrest types correspond to relative populations. 
+
+
+Furthermore, we take the extra step based on this data to predict how many `Rape` arrests will happen in a state, given its Urban Population Percentage and number of Arrests for Assault.
+
+
+Here is the description of the `USArrests` dataset:
+
+
+_This data set contains statistics, in arrests per 100,000 residents for assault, murder, and rape in each of the 50 US states in 1973. Also given is the percent of the population living in urban areas._
+
+## The Analysis
+Depending on which metric you are interested, you can easily sift through the data to see what state(s) have the highest arrest records for that particular metric.
+
+
+On the lower portion of the app, you can also enter in your % of Urban Population for your state and the number of assault arrests to see a predicted number of rape arrests that will happen for your state.
+
+
+The reason I chose a `Rape Arrest` prediction is that given the Urban Population % and Assault Arrests, over 50% of the variance can be explained on these two predictors alone and are statistically significant for rape arrests.
+
+```{r, echo=FALSE, fig.height= 5}
+mod <- lm(Rape ~ UrbanPop + Assault, data = USArrests)
+summary(mod)$coefficients
+```
+*****
+```{r, echo=FALSE, message = FALSE}
+#The Interface
+#
+# This is the user-interface definition of a Shiny web application. You can
+# run the application by clicking 'Run App' above.
+#
+# Find out more about building applications with Shiny here:
+# 
+#    http://shiny.rstudio.com/
+#
+
+library(shiny)
+library(ggplot2)
+data("USArrests")
+USArrests$State <- row.names(USArrests)
+usa <- USArrests
+
+ui <- fluidPage(
+  
+  # Application title
+  titlePanel(h2("State Arrests Analysis and Prediction (per 100,000)")),
+  
+  # Sidebar with a slider and text input 
+  sidebarLayout(
+    sidebarPanel(
+      h3("Choose Type of Arrest"),
+       sliderInput("slider1","Choose Urban Population Range (in Percent to Total)", min(usa$UrbanPop), max(usa$UrbanPop),
+                   value = c(min(usa$UrbanPop),max(usa$UrbanPop)),step = 2, round = 0),
+      selectInput('metric','Choose Crime', names(usa[,c("Murder","Rape","Assault")])),
+      h3("Enter in Urban Pop. % and Assualt Arrests for Rape Arrest Prediction"),
+      textInput('urbanpopmet', "% Urban Population of a State (32-91)", placeholder = 32),
+      textInput('assaultmet','Assault Arrest (0-300)', placeholder = 100)
+    ),
+    
+    
+    # Show a plot of the generated distribution
+    mainPanel(
+      h3("State Metrics"),
+      h5("(highlighted dot for highest value)"),
+      plotOutput("stateplot", height = "300px"),
+      h3("Prediction of Rape Arrests based on Assault Arrests and Urban Pop. Percentage"),
+      h2(textOutput('text1'))
+    )
+  )
+)
+
+# The Server Side Code
+
+
+# Define server logic
+server <- function(input, output) {
+  data("USArrests")
+  USArrests$State <- row.names(USArrests)
+  usa <- USArrests
+
+  output$stateplot <- renderPlot({
+  minpop <- input$slider1[1]
+  maxpop <- input$slider1[2]
+  data1 <- subset(usa, UrbanPop >= minpop & UrbanPop <= maxpop)
+  data2 <- subset(data1, names(data1)==c("State",input$metric))
+  data3 <- subset(data2, data2[ ,input$metric]==max(data2[,input$metric]))
+  ggplot(data2, aes(x=data2[,input$metric], y = State, xlim(0,300)))+
+    geom_point()+
+    xlab(paste(input$metric," Arrests"))+
+    ylab("State (A-Z)")+
+    theme_classic()+
+    theme(legend.position = "none")+
+    geom_point(data = data3, aes(x=data3[ ,input$metric], y = State, col = 'red', 
+                                 size = 5))
+    
+  })
+  
+  text1 <- reactive({
+    statemodel <- lm( Rape ~ Assault + UrbanPop, data = usa)
+    urbanpop <- as.integer(input$urbanpopmet)
+    assault <- as.integer(input$assaultmet)
+    rapeval<- round(predict(statemodel, 
+                           newdata = data.frame(UrbanPop = urbanpop, Assault = assault)),
+                   0)
+    rapeval
+  })
+  output$text1 <- renderText(paste({text1()}," Predicted Rape Arrests"))
+}
+
+shinyApp(ui = ui, server = server)
+```
+
+## Thank you!
+
+Thank you for taking the time to explore the app and read this presentation! 
+
+I hope you found it both informative and fun!
+
+**Andrew Derbak (c)2018**
